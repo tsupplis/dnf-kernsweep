@@ -1,0 +1,12 @@
+**/*~
+**/.DS_Store
+**/*.swp
+**/*.pyc
+.vscode/**
+.coverage
+__pycache__/**
+local/**
+.ansible/**
+.mypy_cache/**
+.pytest_cache/**
+
