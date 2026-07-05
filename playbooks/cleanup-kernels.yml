@@ -1,0 +1,52 @@
+---
+# Example Ansible playbook for using the dnf_kernsweep module
+#
+# Usage:
+#   # Dry run to see what would be removed
+#   ansible-playbook -i inventory.ini cleanup-kernels.yml --check
+#
+#   # Actually remove obsolete kernels
+#   ansible-playbook -i inventory.ini cleanup-kernels.yml
+#
+#   # Verbose output
+#   ansible-playbook -i inventory.ini cleanup-kernels.yml -v
+
+- name: Clean up obsolete Linux kernels
+  hosts: all
+  become: true
+  tasks:
+    # noqa syntax-check[unknown-module]
+    - name: Check for obsolete kernels (report only)
+      dnf_kernsweep:
+        state: present
+      register: kernel_status
+      
+    - name: Display kernel information
+      debug:
+        msg: |
+          Running kernel: {{ kernel_status.running_kernel }}
+          Latest kernel: {{ kernel_status.latest_kernel }}
+          Obsolete packages: {{ kernel_status.obsolete_count }}
+      when: kernel_status.reboot_required
+      
+    # noqa syntax-check[unknown-module]
+    - name: Remove obsolete kernels
+      dnf_kernsweep:
+        state: absent
+      register: cleanup_result
+      when: kernel_status.obsolete_count > 0
+      
+    - name: Display cleanup results
+      debug:
+        msg: "{{ cleanup_result.msg }}"
+      when: cleanup_result is defined
+      
+    - name: Display removed packages
+      debug:
+        msg: "Removed: {{ cleanup_result.removed_packages | join(', ') }}"
+      when: cleanup_result is defined and cleanup_result.changed
+      
+    - name: Notify about reboot requirement
+      debug:
+        msg: "WARNING: A reboot is required to use the latest kernel ({{ kernel_status.latest_kernel }})"
+      when: kernel_status.reboot_required

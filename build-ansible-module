@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""
+Build a self-contained Ansible module for kernsweep.
+
+This script combines the Ansible module wrapper with the core kernsweep
+functionality into a single file that can be used by Ansible.
+"""
+
+import os
+from pathlib import Path
+
+
+def read_module(filepath):
+    """Read a Python module and strip imports/metadata."""
+    with open(filepath) as f:
+        lines = f.readlines()
+    
+    # Skip module docstring and imports
+    in_docstring = False
+    code_lines = []
+    skip_imports = True
+    
+    for line in lines:
+        # Handle docstrings
+        if line.strip().startswith('"""') or line.strip().startswith("'''"):
+            in_docstring = not in_docstring
+            continue
+        
+        if in_docstring:
+            continue
+        
+        # Skip imports from kernsweep modules
+        if skip_imports and (
+            line.startswith('from kernsweep') or
+            line.startswith('import sys') or
+            line.startswith('import os') or
+            line.startswith('from typing') or
+            line.startswith('from enum')
+        ):
+            continue
+        
+        # Once we hit actual code, stop skipping
+        if line.strip() and not line.startswith('#') and not line.startswith('from') and not line.startswith('import'):
+            skip_imports = False
+        
+        if not skip_imports:
+            code_lines.append(line)
+    
+    return ''.join(code_lines)
+
+
+def build_module():
+    """Build the self-contained Ansible module."""
+    base_dir = Path(__file__).parent
+    output_file = base_dir / "ansible/lib" 
+    output_file.parent.mkdir(exist_ok=True)
+    output_file = base_dir / "ansible/lib" / "dnf_kernsweep.py"
+    output_file.parent.mkdir(exist_ok=True)
+
+    # Read the Ansible module template
+    template_file = base_dir / "library" / "dnf_kernsweep.py"
+    with open(template_file) as f:
+        template = f.read()
+    
+    # Find where to insert the embedded code
+    insert_marker = "from ansible.module_utils.basic import AnsibleModule"
+    
+    # Read core kernsweep modules
+    modules_to_embed = [
+        'kernsweep/utils.py',
+        'kernsweep/detector.py',
+        'kernsweep/analyzer.py',
+        'kernsweep/remover.py',
+    ]
+    
+    embedded_code = []
+    embedded_code.append("\n# ===== EMBEDDED KERNSWEEP CODE =====\n")
+    embedded_code.append("# The following code is embedded from the kernsweep package\n\n")
+    
+    # Add necessary imports
+    embedded_code.append("import subprocess\n")
+    embedded_code.append("import os\n")
+    embedded_code.append("import re\n")
+    embedded_code.append("from typing import List, Set, Tuple, Optional\n")
+    embedded_code.append("from enum import Enum\n")
+    embedded_code.append("from dataclasses import dataclass, field\n\n")
+    
+    # Embed each module
+    for module_path in modules_to_embed:
+        full_path = base_dir / module_path
+        print(f"Embedding {module_path}...")
+        
+        with open(full_path) as f:
+            content = f.read()
+        
+        # Add a comment header
+        embedded_code.append(f"\n# ===== From {module_path} =====\n\n")
+        
+        # Remove imports and docstrings, keep the code
+        lines = content.split('\n')
+        in_docstring = False
+        skip_until_class = True
+        
+        for line in lines:
+            # Skip module-level docstring
+            if '"""' in line or "'''" in line:
+                if skip_until_class:
+                    in_docstring = not in_docstring
+                    continue
+            
+            if in_docstring:
+                continue
+            
+            # Skip imports (we added them globally above)
+            if line.startswith('from ') or line.startswith('import '):
+                continue
+            
+            # Skip empty lines at the start
+            if skip_until_class and not line.strip():
+                continue
+            
+            # Once we hit actual code, keep everything
+            if line.strip():
+                skip_until_class = False
+                embedded_code.append(line + '\n')
+    
+    embedded_code.append("\n# ===== END EMBEDDED KERNSWEEP CODE =====\n\n")
+    
+    # Build the final module
+    # Split template at the import line
+    parts = template.split(insert_marker)
+    if len(parts) != 2:
+        raise ValueError("Could not find insertion point in template")
+    
+    # Remove the try/except import block from the template
+    second_part = parts[1]
+    # Find and remove the kernsweep import block
+    import_block_start = second_part.find("# Import kernsweep")
+    import_block_end = second_part.find("KERNSWEEP_IMPORT_ERROR = str(e)")
+    if import_block_start != -1 and import_block_end != -1:
+        import_block_end = second_part.find('\n', import_block_end) + 1
+        second_part = second_part[:import_block_start] + second_part[import_block_end:]
+    
+    final_module = (
+        parts[0] +
+        insert_marker + '\n\n' +
+        ''.join(embedded_code) +
+        '\n# Kernsweep is now available (embedded above)\n' +
+        'KERNSWEEP_AVAILABLE = True\n' +
+        'KERNSWEEP_IMPORT_ERROR = None\n' +
+        second_part
+    )
+    
+    # Write the output
+    with open(output_file, 'w') as f:
+        f.write(final_module)
+    
+    print(f"\n✓ Self-contained module created: {output_file}")
+    print(f"  Size: {output_file.stat().st_size} bytes")
+    print(f"\nYou can now use this module with Ansible:")
+    print(f"  ANSIBLE_LIBRARY=ansible/lib ansible-playbook playbooks/simple-cleanup.yml")
+
+
+if __name__ == '__main__':
+    build_module()

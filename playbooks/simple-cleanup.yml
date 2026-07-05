@@ -1,0 +1,10 @@
+---
+# Simple example - just remove obsolete kernels
+- name: Remove obsolete kernels
+  hosts: all
+  become: true
+  tasks:
+    # noqa syntax-check[unknown-module]
+    - name: Clean up old kernels
+      dnf_kernsweep:
+        state: absent
