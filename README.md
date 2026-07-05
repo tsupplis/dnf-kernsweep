@@ -96,12 +96,11 @@ KernSweep includes multiple safety mechanisms to prevent system breakage:
 1. **Protected Kernels**: Never removes the running kernel or the latest installed kernel
 2. **Double-Check Validation**: Validates removal list before execution to ensure protected kernels are not included
 3. **Minimum Kernel Protection**: Ensures at least one kernel remains on the system after removal
-4. **Bulk Removal Warning**: Prevents accidental removal of excessive numbers of kernels (>5)
-5. **Reboot Detection**: Detects when system requires reboot after kernel updates
-6. **Dry-run Mode**: Test operations before making changes
-7. **Confirmation Prompts**: Asks for confirmation before removal (unless `--yes` is used)
-8. **Privilege Checks**: Ensures proper permissions before attempting removal
-9. **installonly-only sweeping**: Only considers the stacked/versioned kernel packages
+4. **Reboot Detection**: Detects when system requires reboot after kernel updates
+5. **Dry-run Mode**: Test operations before making changes
+6. **Confirmation Prompts**: Asks for confirmation before removal (unless `--yes` is used)
+7. **Privilege Checks**: Ensures proper permissions before attempting removal
+8. **installonly-only sweeping**: Only considers the stacked/versioned kernel packages
    (`kernel`, `kernel-core`, `kernel-modules`, `kernel-modules-extra`). Packages like
    `kernel-devel` and `kernel-headers` are deliberately excluded since they are singleton
    packages that dnf upgrades in place and aren't always released for every kernel-core

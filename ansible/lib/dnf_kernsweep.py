@@ -414,9 +414,6 @@ def validate_removal_safety(
     remaining_kernels = len(kernel_images_installed) - len(kernel_images_to_remove)
     if kernel_images_installed and remaining_kernels < 1:
         return False, "Safety check failed: No kernels would remain after removal"
-    # Warn if removing many kernels at once (more than 5)
-    if len(kernel_images_to_remove) > 5:
-        return False, f"Safety check warning: Attempting to remove {len(kernel_images_to_remove)} kernels at once. This seems excessive."
     return True, ""
 def get_protected_packages(running_kernel: str, latest_kernel: str) -> Set[str]:
     """

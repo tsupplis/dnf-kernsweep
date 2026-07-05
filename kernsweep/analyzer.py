@@ -147,10 +147,6 @@ def validate_removal_safety(
     if kernel_images_installed and remaining_kernels < 1:
         return False, "Safety check failed: No kernels would remain after removal"
 
-    # Warn if removing many kernels at once (more than 5)
-    if len(kernel_images_to_remove) > 5:
-        return False, f"Safety check warning: Attempting to remove {len(kernel_images_to_remove)} kernels at once. This seems excessive."
-
     return True, ""
 
 

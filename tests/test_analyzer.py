@@ -96,7 +96,7 @@ class TestAnalyzeKernels(unittest.TestCase):
         self.assertEqual(len(result.obsolete_kernels), 0)
     
     def test_analyze_kernels_many_obsolete(self):
-        """Test with many obsolete kernels - should fail due to bulk removal protection."""
+        """Test with many obsolete kernels - all should be removable in one run."""
         kernels = [
             KernelInfo("6.8.100-200.fc40.x86_64", "kernel-core-6.8.100-200.fc40.x86_64", is_running=True),
         ] + [
@@ -104,12 +104,10 @@ class TestAnalyzeKernels(unittest.TestCase):
             for i in range(50, 60)
         ]
         
-        # Should raise ValueError due to bulk removal warning (>5 kernels)
-        with self.assertRaises(ValueError) as ctx:
-            analyze_kernels(kernels, "6.8.100-200.fc40.x86_64")
+        # No bulk-removal cap - all 10 obsolete kernels should be reported
+        result = analyze_kernels(kernels, "6.8.100-200.fc40.x86_64")
         
-        self.assertIn("10 kernels", str(ctx.exception))
-        self.assertIn("excessive", str(ctx.exception))
+        self.assertEqual(len(result.obsolete_kernels), 10)
     
     def test_analyze_kernels_single_kernel_only(self):
         """Test with only one kernel (running and latest)."""

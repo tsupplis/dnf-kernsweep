@@ -126,8 +126,8 @@ class TestValidateRemovalSafety(unittest.TestCase):
         self.assertFalse(is_safe)
         self.assertIn("Running kernel", error_msg)
     
-    def test_bulk_removal_warning(self):
-        """Test that removing many kernels triggers warning."""
+    def test_large_removal_is_allowed(self):
+        """Test that removing many kernels at once is allowed (no bulk cap)."""
         # Create 8 kernels
         all_kernels = [
             KernelInfo(f"6.8.{90+i}-200.fc40.x86_64", f"kernel-core-6.8.{90+i}-200.fc40.x86_64",
@@ -147,9 +147,8 @@ class TestValidateRemovalSafety(unittest.TestCase):
             all_kernels
         )
         
-        self.assertFalse(is_safe)
-        self.assertIn("6 kernels", error_msg)
-        self.assertIn("excessive", error_msg)
+        self.assertTrue(is_safe)
+        self.assertEqual(error_msg, "")
     
     def test_kernel_modules_in_removal_list(self):
         """Test that kernel-modules packages don't interfere with safety checks."""
